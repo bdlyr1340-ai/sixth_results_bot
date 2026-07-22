@@ -45,6 +45,11 @@ RESULT_STATUSES: tuple[str, ...] = (
 
 DEFAULT_DONATION_NUMBER = "917392710336"
 
+# الطالب يظهر في لوحة المتفوقين فقط إذا كان ناجحًا في جميع المواد
+# ومعدله يساوي هذا الحد أو يتجاوزه.
+HONORS_MIN_AVERAGE = 95.0
+HONORS_PAGE_SIZE = 10
+
 PROVINCE_ALIASES: dict[str, tuple[str, ...]] = {
     "بغداد": ("بغداد", "الكرخ", "الرصافة"),
     "البصرة": ("البصرة",),

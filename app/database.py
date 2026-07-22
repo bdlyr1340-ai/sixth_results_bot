@@ -404,6 +404,86 @@ class Database:
 
         return await asyncio.to_thread(operation)
 
+    async def top_students(
+        self,
+        *,
+        province: str | None = None,
+        minimum_average: float = 95.0,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Return verified high-achieving students ordered by average.
+
+        A student is eligible only when the result is ``ناجح``, all seven
+        core subject values are numeric and at least 50, and the stored
+        average is between ``minimum_average`` and 100.
+        """
+
+        score_columns = (
+            "islamic",
+            "arabic",
+            "english",
+            "biology",
+            "mathematics",
+            "chemistry",
+            "physics",
+        )
+        numeric_subject_checks = " AND ".join(
+            f"({column} <> '' AND {column} NOT GLOB '*[^0-9]*' "
+            f"AND CAST({column} AS INTEGER) BETWEEN 50 AND 100)"
+            for column in score_columns
+        )
+        average_expression = (
+            "CAST(REPLACE(REPLACE(TRIM(average), '%', ''), ',', '.') AS REAL)"
+        )
+        clauses = [
+            "result='ناجح'",
+            "TRIM(average) <> ''",
+            f"{average_expression} BETWEEN ? AND 100",
+            numeric_subject_checks,
+        ]
+        arguments: list[Any] = [float(minimum_average)]
+        if province:
+            clauses.append("province=?")
+            arguments.append(province)
+        where_sql = " AND ".join(clauses)
+
+        def operation() -> tuple[list[dict[str, Any]], int]:
+            with self._connect() as db:
+                count_row = db.execute(
+                    f"SELECT COUNT(*) FROM students WHERE {where_sql}",
+                    arguments,
+                ).fetchone()
+                total = int(count_row[0] or 0)
+                rows = db.execute(
+                    f"""
+                    WITH eligible AS (
+                        SELECT *,
+                               {average_expression} AS average_value,
+                               CASE
+                                   WHEN total <> '' AND total NOT GLOB '*[^0-9]*'
+                                   THEN CAST(total AS INTEGER)
+                                   ELSE 0
+                               END AS total_value
+                        FROM students
+                        WHERE {where_sql}
+                    ), ranked AS (
+                        SELECT eligible.*,
+                               RANK() OVER (
+                                   ORDER BY average_value DESC, total_value DESC
+                               ) AS honor_rank
+                        FROM eligible
+                    )
+                    SELECT * FROM ranked
+                    ORDER BY average_value DESC, total_value DESC, full_name
+                    LIMIT ? OFFSET ?
+                    """,
+                    (*arguments, max(1, int(limit)), max(0, int(offset))),
+                ).fetchall()
+                return [dict(row) for row in rows], total
+
+        return await asyncio.to_thread(operation)
+
     async def delete_scope(
         self, province: str, branch: str | None = None, year: str | None = None
     ) -> int:
