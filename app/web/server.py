@@ -14,6 +14,7 @@ from app.config import Settings
 from app.constants import PROVINCES
 from app.database import Database
 from app.importer.jobs import ImportManager
+from app.importer.remote import encode_remote_source, validate_source_urls
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -80,6 +81,8 @@ def create_web_app(settings: Settings, db: Database, manager: ImportManager) -> 
             db.province_stats(),
             db.list_imports(limit=20),
         )
+        for item in imports:
+            item["source_type"] = "remote" if str(item["archive_path"]).startswith("remote:") else "zip"
         return templates.TemplateResponse(
             request=request,
             name="dashboard.html",
@@ -92,6 +95,37 @@ def create_web_app(settings: Settings, db: Database, manager: ImportManager) -> 
                 "default_branch": "علمي",
             },
         )
+
+    @app.post("/admin/import-remote", include_in_schema=False)
+    async def import_remote(
+        request: Request,
+        province: str = Form(...),
+        source_urls: str = Form(...),
+        branch: str = Form("علمي"),
+        year: str = Form("2025/2026"),
+        exam_round: str = Form("الأول"),
+        replace_existing: str | None = Form(None),
+    ) -> RedirectResponse:
+        require_login(request)
+        if province not in PROVINCES:
+            raise HTTPException(status_code=400, detail="محافظة غير صالحة")
+        try:
+            urls = validate_source_urls(source_urls.splitlines())
+            encoded_source = encode_remote_source(urls)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        import_id = await db.create_import(
+            province=province,
+            branch=branch.strip() or "علمي",
+            year=year.strip() or "2025/2026",
+            exam_round=exam_round.strip() or "الأول",
+            archive_name=f"مركز نتائجنا — {len(urls)} رابط",
+            archive_path=encoded_source,
+            replace_existing=replace_existing == "on",
+        )
+        await manager.enqueue(import_id)
+        return RedirectResponse(f"/admin/imports/{import_id}", status_code=303)
 
     @app.post("/admin/upload", include_in_schema=False)
     async def upload_archive(
@@ -139,7 +173,8 @@ def create_web_app(settings: Settings, db: Database, manager: ImportManager) -> 
             return RedirectResponse("/admin/login", status_code=303)
         job = await db.get_import(import_id)
         if not job:
-            raise HTTPException(status_code=404, detail="عملية الرفع غير موجودة")
+            raise HTTPException(status_code=404, detail="عملية الاستيراد غير موجودة")
+        job["source_type"] = "remote" if str(job["archive_path"]).startswith("remote:") else "zip"
         return templates.TemplateResponse(
             request=request,
             name="import_status.html",
