@@ -35,6 +35,10 @@ class Settings:
     port: int
     telegram_upload_limit_mb: int
     log_level: str
+    remote_request_timeout: int
+    remote_delay_ms: int
+    remote_max_pdfs: int
+    remote_max_depth: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -61,4 +65,8 @@ class Settings:
             port=_int_env("PORT", 8000),
             telegram_upload_limit_mb=_int_env("TELEGRAM_UPLOAD_LIMIT_MB", 19),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
+            remote_request_timeout=max(10, _int_env("REMOTE_REQUEST_TIMEOUT", 60)),
+            remote_delay_ms=max(0, _int_env("REMOTE_DELAY_MS", 150)),
+            remote_max_pdfs=max(1, _int_env("REMOTE_MAX_PDFS", 5000)),
+            remote_max_depth=max(0, _int_env("REMOTE_MAX_DEPTH", 3)),
         )
