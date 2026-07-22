@@ -15,8 +15,13 @@
   <div class="card" style="margin-top:18px">
     <p><b>المحافظة:</b> {{ job.province }}</p>
     <p><b>الفرع والسنة والدور:</b> {{ job.branch }} - {{ job.year }} - {{ job.exam_round }}</p>
-    <p><b>الملف:</b> {{ job.archive_name }}</p>
-    {% if job.status in ['queued','processing'] %}<div class="alert">الصفحة تتحدث تلقائيًا كل 5 ثوانٍ إلى أن تنتهي الفهرسة.</div>{% endif %}
+    <p><b>المصدر:</b> {{ '🌐 مركز نتائجنا — تنزيل مباشر من السيرفر' if job.source_type == 'remote' else '📦 ' + job.archive_name }}</p>
+    {% if job.status in ['queued','processing'] %}
+      <div class="alert">الصفحة تتحدث تلقائيًا كل 5 ثوانٍ. تستطيع إغلاقها؛ التنزيل والفهرسة يستمران في Railway.</div>
+    {% endif %}
+    {% if job.source_type == 'remote' and job.status == 'processing' and job.total_files == 0 %}
+      <div class="alert" style="margin-top:10px">يجري الآن فحص مجلد مركز نتائجنا واكتشاف روابط ملفات PDF.</div>
+    {% endif %}
     {% if job.error_log %}<h3>سجل التنبيهات</h3><pre>{{ job.error_log }}</pre>{% endif %}
   </div>
 </div>
