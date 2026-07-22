@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}حالة الفهرسة #{{ job.id }}{% endblock %}
+{% block head %}
+{% if job.status in ['queued','processing'] %}<meta http-equiv="refresh" content="5">{% endif %}
+{% endblock %}
+{% block body %}
+<div class="container">
+  <div class="topbar"><h1>📦 عملية الفهرسة #{{ job.id }}</h1><a class="button secondary" href="/admin">العودة للوحة</a></div>
+  <div class="grid">
+    <div class="card stat"><span class="muted">الحالة</span><strong style="font-size:20px">{{ job.status }}</strong></div>
+    <div class="card stat"><span class="muted">ملفات PDF</span><strong>{{ job.processed_files }}/{{ job.total_files }}</strong></div>
+    <div class="card stat"><span class="muted">الطلاب</span><strong>{{ job.student_count }}</strong></div>
+    <div class="card stat"><span class="muted">التنبيهات</span><strong>{{ job.error_count }}</strong></div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <p><b>المحافظة:</b> {{ job.province }}</p>
+    <p><b>الفرع والسنة والدور:</b> {{ job.branch }} - {{ job.year }} - {{ job.exam_round }}</p>
+    <p><b>الملف:</b> {{ job.archive_name }}</p>
+    {% if job.status in ['queued','processing'] %}<div class="alert">الصفحة تتحدث تلقائيًا كل 5 ثوانٍ إلى أن تنتهي الفهرسة.</div>{% endif %}
+    {% if job.error_log %}<h3>سجل التنبيهات</h3><pre>{{ job.error_log }}</pre>{% endif %}
+  </div>
+</div>
+{% endblock %}

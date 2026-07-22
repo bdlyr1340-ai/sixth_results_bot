@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}دخول المالك{% endblock %}
+{% block body %}
+<div class="login card">
+  <h1>👑 دخول مالك البوت</h1>
+  <p class="muted">هذه الصفحة خاصة بك لرفع ملفات المحافظات ومتابعة العدادات.</p>
+  {% if error %}<div class="alert">اسم المستخدم أو كلمة المرور غير صحيحة.</div>{% endif %}
+  <form method="post" action="/admin/login">
+    <label>اسم المستخدم</label>
+    <input name="username" autocomplete="username" required>
+    <label>كلمة المرور</label>
+    <input type="password" name="password" autocomplete="current-password" required>
+    <button type="submit">دخول</button>
+  </form>
+</div>
+{% endblock %}

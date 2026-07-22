@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}لوحة مالك البوت{% endblock %}
+{% block body %}
+<div class="container">
+  <div class="topbar">
+    <div>
+      <h1>👑 لوحة مالك بوت النتائج</h1>
+      <div class="muted">رفع ملفات ZIP، الفهرسة، وعدّادات المحافظات.</div>
+    </div>
+    <form method="post" action="/admin/logout" style="margin:0"><button class="secondary">تسجيل خروج</button></form>
+  </div>
+
+  <div class="grid">
+    <div class="card stat"><span class="muted">الطلاب</span><strong>{{ "{:,}".format(stats.students) }}</strong></div>
+    <div class="card stat"><span class="muted">ملفات PDF</span><strong>{{ "{:,}".format(stats.files) }}</strong></div>
+    <div class="card stat"><span class="muted">المستخدمون</span><strong>{{ "{:,}".format(stats.users) }}</strong></div>
+    <div class="card stat"><span class="muted">عمليات البحث</span><strong>{{ "{:,}".format(stats.searches) }}</strong></div>
+    <div class="card stat"><span class="muted">نسبة العثور</span><strong>{{ stats.success_rate }}%</strong></div>
+  </div>
+
+  <h2 class="section-title">🗺️ ملفات المحافظات</h2>
+  <div class="grid">
+    {% for p in provinces %}
+    <div class="card province-card">
+      <h3>{{ p.province }}</h3>
+      <div class="numbers">
+        <span>📄 {{ p.file_count }} ملف</span>
+        <span>🎓 {{ "{:,}".format(p.student_count) }} طالب</span>
+        <span>🏫 {{ p.school_count }} مدرسة</span>
+      </div>
+      <details>
+        <summary>📦 رفع ملف ZIP لهذه المحافظة</summary>
+        <form method="post" action="/admin/upload" enctype="multipart/form-data">
+          <input type="hidden" name="province" value="{{ p.province }}">
+          <label>ملف ZIP</label>
+          <input type="file" name="archive" accept=".zip,application/zip" required>
+          <label>الفرع</label>
+          <select name="branch"><option>علمي</option><option>أدبي</option></select>
+          <label>السنة</label>
+          <input name="year" value="{{ default_year }}" required>
+          <label>الدور</label>
+          <select name="exam_round"><option>الأول</option><option>الثاني</option><option>الثالث</option></select>
+          <label class="inline"><input type="checkbox" name="replace_existing" checked> استبدال بيانات المحافظة لنفس السنة والفرع والدور</label>
+          <button type="submit">رفع وبدء الفهرسة</button>
+        </form>
+      </details>
+      {% if p.student_count %}
+      <details>
+        <summary style="color:#b42318">🗑️ حذف بيانات المحافظة</summary>
+        <form method="post" action="/admin/delete-province" onsubmit="return confirm('سيتم حذف كل بيانات المحافظة. هل أنت متأكد؟')">
+          <input type="hidden" name="province" value="{{ p.province }}">
+          <label>اكتب اسم المحافظة للتأكيد: {{ p.province }}</label>
+          <input name="confirm" required>
+          <button type="submit" class="danger">حذف البيانات</button>
+        </form>
+      </details>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2 class="section-title">🗂️ آخر عمليات الرفع</h2>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead><tr><th>#</th><th>المحافظة</th><th>الملف</th><th>الحالة</th><th>PDF</th><th>الطلاب</th><th>الأخطاء</th><th></th></tr></thead>
+      <tbody>
+      {% for job in imports %}
+        <tr>
+          <td>{{ job.id }}</td><td>{{ job.province }}</td><td>{{ job.archive_name }}</td>
+          <td><span class="status {{ 'completed' if 'completed' in job.status else ('failed' if job.status == 'failed' else '') }}">{{ job.status }}</span></td>
+          <td>{{ job.processed_files }}/{{ job.total_files }}</td><td>{{ job.student_count }}</td><td>{{ job.error_count }}</td>
+          <td><a class="button secondary" href="/admin/imports/{{ job.id }}">تفاصيل</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8">لا توجد عمليات رفع بعد.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

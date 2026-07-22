@@ -1,1 +1,47 @@
-
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}لوحة نتائج السادس{% endblock %}</title>
+  <style>
+    :root { --bg:#f5f7fb; --card:#fff; --text:#172033; --muted:#697386; --primary:#2557d6; --danger:#b42318; --ok:#067647; --border:#e4e8f0; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Tahoma, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    .container { width:min(1180px, 94%); margin:24px auto 60px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:20px; }
+    .topbar h1 { margin:0; font-size:clamp(22px,4vw,34px); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:18px; box-shadow:0 5px 18px rgba(30,41,59,.05); }
+    .stat strong { display:block; font-size:30px; margin-top:8px; }
+    .muted { color:var(--muted); }
+    .province-card h3 { margin:0 0 7px; }
+    .province-card .numbers { display:flex; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:14px; }
+    details { margin-top:14px; }
+    summary { cursor:pointer; color:var(--primary); font-weight:bold; }
+    form { display:grid; gap:10px; margin-top:14px; }
+    label { font-size:14px; font-weight:bold; }
+    input, select, button { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; font:inherit; }
+    input[type=checkbox] { width:auto; }
+    button, .button { border:none; background:var(--primary); color:#fff; cursor:pointer; font-weight:bold; text-decoration:none; text-align:center; display:inline-block; border-radius:10px; padding:11px 14px; }
+    button.secondary, .button.secondary { background:#eef2ff; color:var(--primary); }
+    button.danger { background:var(--danger); }
+    .inline { display:flex; align-items:center; gap:8px; }
+    table { width:100%; border-collapse:collapse; background:#fff; border-radius:14px; overflow:hidden; }
+    th, td { padding:12px; border-bottom:1px solid var(--border); text-align:right; font-size:14px; }
+    th { background:#f8fafc; }
+    .status { display:inline-block; padding:5px 9px; border-radius:999px; background:#eef2ff; color:var(--primary); font-size:12px; font-weight:bold; }
+    .status.completed { background:#ecfdf3; color:var(--ok); }
+    .status.failed { background:#fef3f2; color:var(--danger); }
+    .section-title { margin:30px 0 14px; }
+    .alert { background:#fff4e5; border:1px solid #fedf89; padding:12px; border-radius:10px; }
+    .login { width:min(430px,92%); margin:10vh auto; }
+    pre { white-space:pre-wrap; word-break:break-word; direction:rtl; background:#111827; color:#f9fafb; padding:14px; border-radius:12px; }
+    @media (max-width:700px){ table{display:block;overflow-x:auto}.topbar{align-items:flex-start;flex-direction:column} }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% block body %}{% endblock %}
+</body>
+</html>
