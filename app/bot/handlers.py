@@ -11,6 +11,9 @@ from aiogram.types import CallbackQuery, Message
 
 from app.bot.keyboards import (
     donation_keyboard,
+    leaders_menu_keyboard,
+    leaders_page_keyboard,
+    leaders_provinces_keyboard,
     main_menu,
     matches_keyboard,
     no_results_keyboard,
@@ -21,7 +24,7 @@ from app.bot.keyboards import (
 )
 from app.bot.states import SearchStates
 from app.config import Settings
-from app.constants import PROVINCES, SUBJECTS
+from app.constants import HONORS_MIN_AVERAGE, HONORS_PAGE_SIZE, PROVINCES, SUBJECTS
 from app.database import Database
 from app.text_utils import valid_search_name
 
@@ -74,6 +77,41 @@ def format_student(row: dict[str, Any]) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _display_average(value: Any) -> str:
+    text = str(value or "-").strip()
+    return text if text.endswith("%") or text == "-" else f"{text}%"
+
+
+def format_leaders(
+    rows: list[dict[str, Any]],
+    *,
+    title: str,
+    total: int,
+    page: int,
+) -> str:
+    page_count = max(1, (total + HONORS_PAGE_SIZE - 1) // HONORS_PAGE_SIZE)
+    lines = [
+        f"🏆 <b>{html.escape(title)}</b>",
+        f"المعدل المعتمد: <b>{HONORS_MIN_AVERAGE:g}% فما فوق</b>",
+        f"الصفحة <b>{page + 1}</b> من <b>{page_count}</b> — العدد: <b>{total}</b>",
+        "",
+    ]
+    for row in rows:
+        rank = int(row.get("honor_rank") or 0)
+        medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(rank, "⭐")
+        lines.extend(
+            [
+                f"{medal} <b>المركز {rank}</b>",
+                f"👤 {html.escape(str(row.get('full_name') or ''))}",
+                f"🏫 {html.escape(str(row.get('school_name') or 'غير محددة'))}",
+                f"📍 {html.escape(str(row.get('province') or ''))}",
+                f"📊 <b>{html.escape(_display_average(row.get('average')))}</b>",
+                "──────────────",
+            ]
+        )
+    return "\n".join(lines).rstrip("─\n")
 
 
 async def _show_home(message_or_callback: Message | CallbackQuery, settings: Settings) -> None:
@@ -130,6 +168,94 @@ async def choose_province(callback: CallbackQuery, state: FSMContext, db: Databa
     await callback.message.edit_text(
         "🗺️ <b>اختر المحافظة</b>\n\nالمحافظات التي لا تحتوي بيانات تظهر بعبارة قريبًا.",
         reply_markup=provinces_keyboard(stats),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "leaders:menu")
+async def leaders_menu(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(
+        "🏆 <b>الطلاب المتفوقون</b>\n\n"
+        f"تعرض القائمة الطلبة الناجحين في جميع المواد بمعدل "
+        f"<b>{HONORS_MIN_AVERAGE:g}% فما فوق</b>.\n\n"
+        "اختر طريقة العرض:",
+        reply_markup=leaders_menu_keyboard(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "leaders:provinces")
+async def leaders_provinces(callback: CallbackQuery, db: Database) -> None:
+    stats = await db.province_stats()
+    if not any(int(row.get("student_count") or 0) for row in stats):
+        await callback.answer("لا توجد بيانات نتائج مرفوعة بعد.", show_alert=True)
+        return
+    await callback.message.edit_text(
+        "🗺️ <b>اختر المحافظة</b>\n\n"
+        "ستظهر أسماء المتفوقين مع المدرسة والمعدل مرتبة من الأعلى.",
+        reply_markup=leaders_provinces_keyboard(stats),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("leaders:list:"))
+async def leaders_list(callback: CallbackQuery, db: Database) -> None:
+    parts = callback.data.split(":")
+    province: str | None = None
+    province_index: int | None = None
+    try:
+        if len(parts) == 4 and parts[2] == "all":
+            page = max(0, int(parts[3]))
+            title = "أوائل العراق"
+            scope = "all"
+        elif len(parts) == 5 and parts[2] == "p":
+            province_index = int(parts[3])
+            province = PROVINCES[province_index]
+            page = max(0, int(parts[4]))
+            title = f"متفوقو محافظة {province}"
+            scope = "province"
+        else:
+            raise ValueError
+    except (ValueError, IndexError):
+        await callback.answer("اختيار غير صالح", show_alert=True)
+        return
+
+    rows, total = await db.top_students(
+        province=province,
+        minimum_average=HONORS_MIN_AVERAGE,
+        limit=HONORS_PAGE_SIZE,
+        offset=page * HONORS_PAGE_SIZE,
+    )
+    if not rows:
+        if page > 0 and total:
+            await callback.answer("هذه الصفحة غير موجودة.", show_alert=True)
+            return
+        await callback.message.edit_text(
+            f"🏆 <b>{html.escape(title)}</b>\n\n"
+            f"لا يوجد حاليًا طلاب مستوفون لشروط التفوق "
+            f"بمعدل {HONORS_MIN_AVERAGE:g}% فما فوق.",
+            reply_markup=leaders_page_keyboard(
+                scope=scope,
+                page=0,
+                has_previous=False,
+                has_next=False,
+                province_index=province_index,
+            ),
+        )
+        await callback.answer()
+        return
+
+    has_previous = page > 0
+    has_next = (page + 1) * HONORS_PAGE_SIZE < total
+    await callback.message.edit_text(
+        format_leaders(rows, title=title, total=total, page=page),
+        reply_markup=leaders_page_keyboard(
+            scope=scope,
+            page=page,
+            has_previous=has_previous,
+            has_next=has_next,
+            province_index=province_index,
+        ),
     )
     await callback.answer()
 
