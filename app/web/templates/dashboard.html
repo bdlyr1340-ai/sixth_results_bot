@@ -5,24 +5,20 @@
   <div class="topbar">
     <div>
       <h1>👑 لوحة مالك بوت النتائج</h1>
-      <div class="muted">جلب النتائج من مركز نتائجنا مباشرة، الفهرسة، وعدّادات المحافظات.</div>
+      <div class="muted">رفع ملفات ZIP، الفهرسة، وعدّادات المحافظات.</div>
     </div>
     <form method="post" action="/admin/logout" style="margin:0"><button class="secondary">تسجيل خروج</button></form>
   </div>
 
-  <div class="alert" style="margin-bottom:18px">
-    <b>🌐 الطريقة الأسرع:</b> افتح مركز نتائجنا، ادخل إلى مجلد المحافظة ثم الفرع، وانسخ الرابط. ألصقه في بطاقة المحافظة أدناه؛ Railway ينزل ملفات PDF ويقرأها واحدًا واحدًا ثم يحذف النسخ المؤقتة. لا ترفع ملفًا من الهاتف.
-  </div>
-
   <div class="grid">
     <div class="card stat"><span class="muted">الطلاب</span><strong>{{ "{:,}".format(stats.students) }}</strong></div>
-    <div class="card stat"><span class="muted">ملفات PDF المفهرسة</span><strong>{{ "{:,}".format(stats.files) }}</strong></div>
+    <div class="card stat"><span class="muted">ملفات PDF</span><strong>{{ "{:,}".format(stats.files) }}</strong></div>
     <div class="card stat"><span class="muted">المستخدمون</span><strong>{{ "{:,}".format(stats.users) }}</strong></div>
     <div class="card stat"><span class="muted">عمليات البحث</span><strong>{{ "{:,}".format(stats.searches) }}</strong></div>
     <div class="card stat"><span class="muted">نسبة العثور</span><strong>{{ stats.success_rate }}%</strong></div>
   </div>
 
-  <h2 class="section-title">🗺️ مصادر المحافظات</h2>
+  <h2 class="section-title">🗺️ ملفات المحافظات</h2>
   <div class="grid">
     {% for p in provinces %}
     <div class="card province-card">
@@ -32,27 +28,8 @@
         <span>🎓 {{ "{:,}".format(p.student_count) }} طالب</span>
         <span>🏫 {{ p.school_count }} مدرسة</span>
       </div>
-
-      <details open>
-        <summary>🌐 جلب مباشر من مركز نتائجنا — المفضل</summary>
-        <form method="post" action="/admin/import-remote">
-          <input type="hidden" name="province" value="{{ p.province }}">
-          <label>رابط مجلد المحافظة/الفرع</label>
-          <textarea name="source_urls" rows="4" required dir="ltr" placeholder="https://center.mlazemna.com/.../علمي/"></textarea>
-          <div class="muted" style="font-size:13px">لبغداد تستطيع وضع روابط الكرخ والرصافة، كل رابط في سطر مستقل.</div>
-          <label>الفرع</label>
-          <select name="branch"><option>علمي</option><option>أدبي</option></select>
-          <label>السنة</label>
-          <input name="year" value="{{ default_year }}" required>
-          <label>الدور</label>
-          <select name="exam_round"><option>الأول</option><option>الثاني</option><option>الثالث</option><option>التمهيدي</option></select>
-          <label class="inline"><input type="checkbox" name="replace_existing" checked> استبدال بيانات المحافظة لنفس السنة والفرع والدور</label>
-          <button type="submit">🌐 جلب الملفات وبدء الفهرسة</button>
-        </form>
-      </details>
-
       <details>
-        <summary>📦 رفع ZIP يدويًا — احتياط فقط</summary>
+        <summary>📦 رفع ملف ZIP لهذه المحافظة</summary>
         <form method="post" action="/admin/upload" enctype="multipart/form-data">
           <input type="hidden" name="province" value="{{ p.province }}">
           <label>ملف ZIP</label>
@@ -62,12 +39,11 @@
           <label>السنة</label>
           <input name="year" value="{{ default_year }}" required>
           <label>الدور</label>
-          <select name="exam_round"><option>الأول</option><option>الثاني</option><option>الثالث</option><option>التمهيدي</option></select>
+          <select name="exam_round"><option>الأول</option><option>الثاني</option><option>الثالث</option></select>
           <label class="inline"><input type="checkbox" name="replace_existing" checked> استبدال بيانات المحافظة لنفس السنة والفرع والدور</label>
           <button type="submit">رفع وبدء الفهرسة</button>
         </form>
       </details>
-
       {% if p.student_count %}
       <details>
         <summary style="color:#b42318">🗑️ حذف بيانات المحافظة</summary>
@@ -83,21 +59,20 @@
     {% endfor %}
   </div>
 
-  <h2 class="section-title">🗂️ آخر عمليات الاستيراد</h2>
+  <h2 class="section-title">🗂️ آخر عمليات الرفع</h2>
   <div class="card" style="padding:0;overflow:hidden">
     <table>
-      <thead><tr><th>#</th><th>المحافظة</th><th>المصدر</th><th>الحالة</th><th>PDF</th><th>الطلاب</th><th>الأخطاء</th><th></th></tr></thead>
+      <thead><tr><th>#</th><th>المحافظة</th><th>الملف</th><th>الحالة</th><th>PDF</th><th>الطلاب</th><th>الأخطاء</th><th></th></tr></thead>
       <tbody>
       {% for job in imports %}
         <tr>
-          <td>{{ job.id }}</td><td>{{ job.province }}</td>
-          <td>{{ '🌐 مركز نتائجنا' if job.source_type == 'remote' else '📦 ' + job.archive_name }}</td>
+          <td>{{ job.id }}</td><td>{{ job.province }}</td><td>{{ job.archive_name }}</td>
           <td><span class="status {{ 'completed' if 'completed' in job.status else ('failed' if job.status == 'failed' else '') }}">{{ job.status }}</span></td>
           <td>{{ job.processed_files }}/{{ job.total_files }}</td><td>{{ job.student_count }}</td><td>{{ job.error_count }}</td>
           <td><a class="button secondary" href="/admin/imports/{{ job.id }}">تفاصيل</a></td>
         </tr>
       {% else %}
-        <tr><td colspan="8">لا توجد عمليات استيراد بعد.</td></tr>
+        <tr><td colspan="8">لا توجد عمليات رفع بعد.</td></tr>
       {% endfor %}
       </tbody>
     </table>
